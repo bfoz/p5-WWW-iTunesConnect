@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.2 2008/11/16 07:35:34 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.3 2008/11/16 04:33:23 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -236,9 +236,9 @@ iTunesConnect - An iTunesConnect client interface
 
 =head1 SYNOPSIS
 
- use iTunesConnect;
+ use WWW::iTunesConnect;
 
- my $itc = iTunesConnect->new(user=>$user, password=>$password);
+ my $itc = WWW::iTunesConnect->new(user=>$user, password=>$password);
  my %report = $itc->daily_sales_summary;
 
 =head1 DESCRIPTION
@@ -302,10 +302,13 @@ Dates are sorted in descending order.
 =item $itc->daily_sales_summary()
 
 Fetch the most recent Sales/Trends Daily Summary report and return it as a
-hash of array references. The returned hash has two elements: header and data.
-The header element is an array of the column headers in the fetched TSV file.
-The data element is an array of array references, one for each non-header line 
-in the fetched TSV file.
+hash of array references. The returned hash has four elements: I<header>, 
+I<data>, I<file> and I<filename>. The I<header> element is an array of the 
+column headers in the fetched TSV file. The I<data> element is an array of 
+array references, one for each non-header line in the fetched TSV file. The 
+I<file> element is the raw content of the file retrieved from iTunes Connect 
+and the I<filename> element is the filename provided by the Content-Disposition 
+header line.
 
 If a single string argument is given in the form 'MM/DD/YYYY' that date will be
 fetched instead (if it's available).
