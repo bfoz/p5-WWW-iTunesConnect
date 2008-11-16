@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.1 2008/11/16 04:45:18 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.2 2008/11/16 07:35:34 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.1 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -126,6 +126,8 @@ sub daily_sales_summary
 # Fetch the summary
     my $r = $s->{ua}->request($form->click('download'));
     return undef unless $r;
+    my $filename =  $r->header('Content-Disposition');
+    $filename = (split(/=/, $filename))[1] if $filename;
 # gunzip the data
     my $content;
     my $input = $r->content;
@@ -140,7 +142,7 @@ sub daily_sales_summary
         push @data, \@a;
     }
 
-    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $r->filename);
+    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
 }
 
 # --- Getters and Setters ---
