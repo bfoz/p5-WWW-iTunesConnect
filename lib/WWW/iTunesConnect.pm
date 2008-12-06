@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.3 2008/11/16 04:33:23 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.4 2008/12/06 21:18:46 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -94,7 +94,7 @@ sub daily_sales_summary_dates
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
     my $form = $s->daily_sales_summary_form();
 # Pull the available dates out of the form's select input
-    my $input = $form->find_input('9.9.1', 'option');
+    my $input = $form->find_input('9.11.1', 'option');
     return undef unless $input;
 # Sort and return the dates
     sort { $b cmp $a } $input->possible_values;
@@ -112,14 +112,15 @@ sub daily_sales_summary
         my @dates = $s->daily_sales_summary_dates();
         # The list is sorted in descending order, so most recent is first
         $date = shift @dates;
+	return undef unless $date;
     }
 
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
     my $form = $s->daily_sales_summary_form();
 # Submit the form to get the latest daily summary
-    $form->value('9.5', 'Summary');
-    $form->value('9.7', 'Daily');
-    $form->value('9.9.1', $date);
+    $form->value('9.7', 'Summary');
+    $form->value('9.9', 'Daily');
+    $form->value('9.11.1', $date);
     $form->value('hiddenDayOrWeekSelection', $date);
     $form->value('hiddenSubmitTypeName', 'Download');
     $form->value('download', 'Download');
@@ -172,8 +173,8 @@ sub daily_sales_summary_form
 # Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
 #  and submit it to get a list of available Daily Summary dates.
         my $form = $s->sales_form();
-        $form->value('9.5', 'Summary');
-        $form->value('9.7', 'Daily');
+        $form->value('9.7', 'Summary');
+        $form->value('9.9', 'Daily');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
         $s->{daily_summary_sales_response} = $r;
