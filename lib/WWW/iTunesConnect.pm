@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.5 2009/01/02 01:18:03 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.6 2009/01/02 03:04:28 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -147,6 +147,71 @@ sub daily_sales_summary
     ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
 }
 
+# Fetch the list of available dates for Sales/Trend Weekly Summary Reports. This
+#  caches the returned results so it can be safely called multiple times.
+sub weekly_sales_summary_dates
+{
+    my $s = shift;
+
+# Get an HTML::Form object for the Sales/Trends Reports Weekly Summary page
+    my $form = $s->weekly_sales_summary_form();
+    return undef unless $form;
+# Pull the available date ranges out of the form's select input
+    my $input = $form->find_input('9.13.1', 'option');
+    return undef unless $input;
+# Parse the strings into an array of hash references
+    my @weeklies;
+    push @weeklies, {'From', split(/ /, $_)} for $input->value_names;
+# Sort and return the date ranges
+    sort { $b->{To} cmp $a->{To} } @weeklies;
+}
+
+sub weekly_sales_summary
+{
+    my $s = shift;
+    my $week = shift if scalar @_;
+
+    return undef if $week and ($week !~ /\d{2}\/\d{2}\/\d{4}/);
+    unless( $week )
+    {
+        # Get the list of available dates
+        my @weeks = $s->weekly_sales_summary_dates();
+        # The list is sorted in descending order, so most recent is first
+        $week = shift @weeks;
+	return undef unless $week;
+    }
+
+# Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
+    my $form = $s->weekly_sales_summary_form();
+# Submit the form to get the latest weekly summary
+    $form->value('9.7', 'Summary');
+    $form->value('9.9', 'Weekly');
+    $form->value('9.13.1', $week->{To});
+    $form->value('hiddenDayOrWeekSelection', $week->{To});
+    $form->value('hiddenSubmitTypeName', 'Download');
+    $form->value('download', 'Download');
+# Fetch the summary
+    my $r = $s->{ua}->request($form->click('download'));
+    return undef unless $r;
+    my $filename =  $r->header('Content-Disposition');
+    $filename = (split(/=/, $filename))[1] if $filename;
+# gunzip the data
+    my $content;
+    my $input = $r->content;
+    gunzip \$input => \$content or die "gunzip failed: $GunzipError\n";
+# Parse the data into a hash of arrays
+    my @content = split /\n/,$content;
+    my @header = split /\t/, shift(@content);
+    my @data;
+    for( @content )
+    {
+        my @a = split /\t/;
+        push @data, \@a;
+    }
+
+    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
+}
+
 # --- Getters and Setters ---
 
 sub user
@@ -184,6 +249,32 @@ sub daily_sales_summary_form
 
 # Pull the date list out of the returned form object
     my @forms = HTML::Form->parse($s->{daily_summary_sales_response});
+    @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
+    return undef unless @forms;
+    shift @forms;
+}
+
+# Use the Sales/Trend Reports form to get a form for fetching weekly summaries
+sub weekly_sales_summary_form
+{
+    my ($s) = @_;
+
+# Use cached response to avoid another trip on the net
+    unless( $s->{weekly_summary_sales_response} )
+    {
+# Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
+#  and submit it to get a list of available Weekly Summary dates.
+        my $form = $s->sales_form();
+        return undef unless $form;
+        $form->value('9.7', 'Summary');
+        $form->value('9.9', 'Weekly');
+        $form->value('hiddenSubmitTypeName', 'ShowDropDown');
+        my $r = $s->{ua}->request($form->click('download'));
+        $s->{weekly_summary_sales_response} = $r;
+    }
+
+# Pull the date list out of the returned form object
+    my @forms = HTML::Form->parse($s->{weekly_summary_sales_response});
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
     shift @forms;
@@ -323,6 +414,27 @@ header line.
 
 If a single string argument is given in the form 'MM/DD/YYYY' that date will be
 fetched instead (if it's available).
+
+=item $itc->weekly_sales_summary_dates
+
+Fetch the list of available dates for Sales/Trend Weekly Summary Reports. This
+caches the returned results so it can be safely called multiple times.
+
+Dates are sorted in descending order.
+
+=item $itc->weekly_sales_summary()
+
+Fetch the most recent Sales/Trends Weekly Summary report and return it as a
+hash of array references. The returned hash has four elements: I<header>, 
+I<data>, I<file> and I<filename>. The I<header> element is an array of the 
+column headers in the fetched TSV file. The I<data> element is an array of 
+array references, one for each non-header line in the fetched TSV file. The 
+I<file> element is the raw content of the file retrieved from iTunes Connect 
+and the I<filename> element is the filename provided by the Content-Disposition 
+header line.
+
+If a single string argument is given in the form 'MM/DD/YYYY' the week ending 
+on the given date will be fetched instead (if it's available).
 
 =back
 
