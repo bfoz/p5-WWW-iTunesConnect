@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.6 2009/01/02 03:04:28 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.7 2009/01/02 04:22:26 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -147,6 +147,83 @@ sub daily_sales_summary
     ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
 }
 
+# Fetch the list of available dates for Sales/Trend Monthly Summary Reports. This
+#  caches the returned results so it can be safely called multiple times.
+sub monthly_free_summary_dates
+{
+    my $s = shift;
+
+# Get an HTML::Form object for the Sales/Trends Reports Monthly Summary page
+    my $form = $s->monthly_free_summary_form();
+    return undef unless $form;
+# Pull the available date ranges out of the form's select input
+    my $input = $form->find_input('9.14.1', 'option');
+    return undef unless $input;
+# Parse the strings into an array of hash references
+    my @dates;
+    push @dates, {'From', split(/ /, $_)} for $input->value_names;
+# Sort and return the date ranges
+    sort { $b->{To} cmp $a->{To} } @dates;
+}
+
+sub monthly_free_summary
+{
+    my $s = shift;
+    my (%options) = @_ if scalar @_;
+
+    return undef if %options and $options{To} and $options{From} and 
+	(($options{To} !~ /\d{2}\/\d{2}\/\d{4}/) or 
+	($options{From} !~ /\d{2}\/\d{2}\/\d{4}/));
+    unless( %options )
+    {
+        # Get the list of available dates
+        my @months = $s->monthly_free_summary_dates();
+	return undef unless @months;
+        # The list is sorted in descending order, so most recent is first
+        %options = %{shift @months};
+    }
+
+# Munge the date range into the format used by the form
+    $options{To} =~ /(\d{2})\/(\d{2})\/(\d{4})/;
+    my $to = $3.$1.$2;
+    $options{From} =~ /(\d{2})\/(\d{2})\/(\d{4})/;
+    my $month = $3.$1.$2.'#'.$to;
+
+# Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
+    my $form = $s->monthly_free_summary_form();
+# Submit the form to get the latest weekly summary
+    $form->value('9.7', 'Summary');
+    $form->value('9.9', 'Monthly Free');
+    $form->value('9.14.1', $month);
+    $form->value('hiddenDayOrWeekSelection', $month);
+    $form->value('hiddenSubmitTypeName', 'Download');
+    $form->value('download', 'Download');
+# Fetch the summary
+    my $r = $s->{ua}->request($form->click('download'));
+    return undef unless $r;
+# If a given month is actually empty, the download will return the same page 
+#  with a notice to the user. Check for the notice and bail out if found.
+    return undef unless index($r->as_string, 'There are no free transactions to report') == -1;
+
+    my $filename =  $r->header('Content-Disposition');
+    $filename = (split(/=/, $filename))[1] if $filename;
+# gunzip the data
+    my $content;
+    my $input = $r->content;
+    gunzip \$input => \$content or die "gunzip failed: $GunzipError\n";
+# Parse the data into a hash of arrays
+    my @content = split /\n/,$content;
+    my @header = split /\t/, shift(@content);
+    my @data;
+    for( @content )
+    {
+        my @a = split /\t/;
+        push @data, \@a;
+    }
+
+    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
+}
+
 # Fetch the list of available dates for Sales/Trend Weekly Summary Reports. This
 #  caches the returned results so it can be safely called multiple times.
 sub weekly_sales_summary_dates
@@ -160,10 +237,10 @@ sub weekly_sales_summary_dates
     my $input = $form->find_input('9.13.1', 'option');
     return undef unless $input;
 # Parse the strings into an array of hash references
-    my @weeklies;
-    push @weeklies, {'From', split(/ /, $_)} for $input->value_names;
+    my @dates;
+    push @dates, {'From', split(/ /, $_)} for $input->value_names;
 # Sort and return the date ranges
-    sort { $b->{To} cmp $a->{To} } @weeklies;
+    sort { $b->{To} cmp $a->{To} } @dates;
 }
 
 sub weekly_sales_summary
@@ -176,9 +253,10 @@ sub weekly_sales_summary
     {
         # Get the list of available dates
         my @weeks = $s->weekly_sales_summary_dates();
+	return undef unless @weeks;
         # The list is sorted in descending order, so most recent is first
         $week = shift @weeks;
-	return undef unless $week;
+	$week = $week->{To};
     }
 
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
@@ -186,8 +264,8 @@ sub weekly_sales_summary
 # Submit the form to get the latest weekly summary
     $form->value('9.7', 'Summary');
     $form->value('9.9', 'Weekly');
-    $form->value('9.13.1', $week->{To});
-    $form->value('hiddenDayOrWeekSelection', $week->{To});
+    $form->value('9.13.1', $week);
+    $form->value('hiddenDayOrWeekSelection', $week);
     $form->value('hiddenSubmitTypeName', 'Download');
     $form->value('download', 'Download');
 # Fetch the summary
@@ -247,8 +325,36 @@ sub daily_sales_summary_form
         $s->{daily_summary_sales_response} = $r;
     }
 
-# Pull the date list out of the returned form object
+# The response includes a form containing a select input element with the list 
+#  of available dates. Create and return a form object for it.
     my @forms = HTML::Form->parse($s->{daily_summary_sales_response});
+    @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
+    return undef unless @forms;
+    shift @forms;
+}
+
+# Use the Sales/Trend Reports form to get a form for fetching monthly summaries
+sub monthly_free_summary_form
+{
+    my ($s) = @_;
+
+# Use cached response to avoid another trip on the net
+    unless( $s->{monthly_summary_free_response} )
+    {
+# Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
+#  and submit it to get a list of available Monthly Summary dates.
+        my $form = $s->sales_form();
+        return undef unless $form;
+        $form->value('9.7', 'Summary');
+        $form->value('9.9', 'Monthly Free');
+        $form->value('hiddenSubmitTypeName', 'ShowDropDown');
+        my $r = $s->{ua}->request($form->click('download'));
+        $s->{monthly_summary_free_response} = $r;
+    }
+
+# The response includes a form containing a select input element with the list 
+#  of available dates. Create and return a form object for it.
+    my @forms = HTML::Form->parse($s->{monthly_summary_free_response});
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
     shift @forms;
@@ -273,7 +379,8 @@ sub weekly_sales_summary_form
         $s->{weekly_summary_sales_response} = $r;
     }
 
-# Pull the date list out of the returned form object
+# The response includes a form containing a select input element with the list 
+#  of available dates. Create and return a form object for it.
     my @forms = HTML::Form->parse($s->{weekly_summary_sales_response});
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
@@ -354,7 +461,7 @@ this will be a complete interface.
 
 =over
 
-=item $itc = iTunesConnect->new;
+=item $itc = iTunesConnect->new(user=>$user, password=>$password);
 
 Constructs and returns a new C<iTunesConnect> interface object. Accepts a hash
 containing the iTunes Connect username and password.
@@ -414,6 +521,31 @@ header line.
 
 If a single string argument is given in the form 'MM/DD/YYYY' that date will be
 fetched instead (if it's available).
+
+=item $itc->monthly_free_summary_dates
+
+Fetch the list of available months for Sales/Trend Monthly Summary Reports. This
+caches the returned results so it can be safely called multiple times.
+
+Months are returned as an array of hash references in descending order. Each 
+hash contains the keys I<From> and I<To>, indicating the start and end dates of 
+each report.
+
+=item $itc->monthly_free_summary( %options )
+
+Fetch the most recent Sales/Trends Monthly Summary report and return it as a
+hash of array references. The returned hash has four elements: I<header>, 
+I<data>, I<file> and I<filename>. The I<header> element is an array of the 
+column headers in the fetched TSV file. The I<data> element is an array of 
+array references, one for each non-header line in the fetched TSV file. The 
+I<file> element is the raw content of the file retrieved from iTunes Connect 
+and the I<filename> element is the filename provided by the Content-Disposition 
+header line.
+
+If both I<From> and I<To> options are passed, and both are of the form 
+'MM/DD/YYYY', the monthly summary matching the two dates will be fetched 
+instead (if it's available). The hashes returned by monthly_free_summary_dates()
+are suitable for passing to this method.
 
 =item $itc->weekly_sales_summary_dates
 
