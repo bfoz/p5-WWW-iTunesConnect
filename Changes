@@ -1,5 +1,8 @@
 Revision history for Perl extension WWW::iTunesConnect.
 
+0.02  Sat Dec  6 
+	- Updates to form element names because Apple updated the pages
+
 0.01  Sat Nov 15 19:21:04 2008
 	- original version; created by h2xs 1.23 with options
 		-AX --skip-exporter --use-new-tests -m WWW::iTunesConnect
