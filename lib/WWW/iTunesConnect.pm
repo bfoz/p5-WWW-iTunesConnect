@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.7 2009/01/02 04:22:26 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.8 2009/01/02 05:41:05 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,13 +12,15 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
 use constant URL_PHOBOS => 'https://phobos.apple.com';
+
+# --- Constructor ---
 
 sub new
 {
@@ -35,6 +37,35 @@ sub new
 
     return $self;
 }
+
+# --- Class Methods ---
+
+# Parse a gzip'd summary file fetched from the Sales/Trend page
+#  First argument is same as input argument to gunzip constructor
+#  Remaining arguments are passed as options to gunzip
+sub parse_sales_summary
+{
+    my ($input, %options) = @_;
+
+# gunzip the data into a scalar
+    my $content;
+    my $status = gunzip $input => \$content;
+    return $status unless $status;
+
+# Parse the data into a hash of arrays
+    my @content = split /\n/,$content;
+    my @header = split /\t/, shift(@content);
+    my @data;
+    for( @content )
+    {
+        my @a = split /\t/;
+        push @data, \@a;
+    }
+
+    ('header', \@header, 'data', \@data);
+}
+
+# --- Instance Methods ---
 
 sub login
 {
@@ -130,21 +161,8 @@ sub daily_sales_summary
     return undef unless $r;
     my $filename =  $r->header('Content-Disposition');
     $filename = (split(/=/, $filename))[1] if $filename;
-# gunzip the data
-    my $content;
-    my $input = $r->content;
-    gunzip \$input => \$content or die "gunzip failed: $GunzipError\n";
-# Parse the data into a hash of arrays
-    my @content = split /\n/,$content;
-    my @header = split /\t/, shift(@content);
-    my @data;
-    for( @content )
-    {
-        my @a = split /\t/;
-        push @data, \@a;
-    }
 
-    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
+    (parse_sales_summary(\$r->content), 'file', $r->content, 'filename', $filename);
 }
 
 # Fetch the list of available dates for Sales/Trend Monthly Summary Reports. This
@@ -207,21 +225,8 @@ sub monthly_free_summary
 
     my $filename =  $r->header('Content-Disposition');
     $filename = (split(/=/, $filename))[1] if $filename;
-# gunzip the data
-    my $content;
-    my $input = $r->content;
-    gunzip \$input => \$content or die "gunzip failed: $GunzipError\n";
-# Parse the data into a hash of arrays
-    my @content = split /\n/,$content;
-    my @header = split /\t/, shift(@content);
-    my @data;
-    for( @content )
-    {
-        my @a = split /\t/;
-        push @data, \@a;
-    }
 
-    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
+    (parse_sales_summary(\$r->content), 'file', $r->content, 'filename', $filename);
 }
 
 # Fetch the list of available dates for Sales/Trend Weekly Summary Reports. This
@@ -273,21 +278,8 @@ sub weekly_sales_summary
     return undef unless $r;
     my $filename =  $r->header('Content-Disposition');
     $filename = (split(/=/, $filename))[1] if $filename;
-# gunzip the data
-    my $content;
-    my $input = $r->content;
-    gunzip \$input => \$content or die "gunzip failed: $GunzipError\n";
-# Parse the data into a hash of arrays
-    my @content = split /\n/,$content;
-    my @header = split /\t/, shift(@content);
-    my @data;
-    for( @content )
-    {
-        my @a = split /\t/;
-        push @data, \@a;
-    }
 
-    ('header', \@header, 'data', \@data, 'file', $input, 'filename', $filename);
+    (parse_sales_summary(\$r->content), 'file', $r->content, 'filename', $filename);
 }
 
 # --- Getters and Setters ---
@@ -461,7 +453,7 @@ this will be a complete interface.
 
 =over
 
-=item $itc = iTunesConnect->new(user=>$user, password=>$password);
+=item $itc = WWW::iTunesConnect->new(user=>$user, password=>$password);
 
 Constructs and returns a new C<iTunesConnect> interface object. Accepts a hash
 containing the iTunes Connect username and password.
@@ -481,6 +473,23 @@ before calling any other methods.
 
 Get/Set the iTunes Connect password. NOTE: User and Password must be set 
 before calling any other methods.
+
+=back
+
+=head1 Class Methods
+
+=item %report = WWW::iTunesConnect->parse_sales_summary($input, %options)
+
+Parse a gzip'd summary file fetched from the Sales/Trend page. Arguments are 
+the same as the L<IO::Uncompress::Gunzip> constructor, less the output argument.
+To parse a file pass a scalar containing the file name as $input. To parse a 
+string of content, pass a scalar reference as $input. The %options hash is 
+passed directly to I<gunzip>.
+
+The returned hash has two elements: I<header> and I<data>. The I<header> element 
+is a reference to an array of the column headers in the fetched TSV file. The 
+I<data> element is a reference to an array of array references, one for each 
+non-header line in the fetched TSV file.
 
 =back
 
@@ -511,10 +520,8 @@ Dates are sorted in descending order.
 =item $itc->daily_sales_summary()
 
 Fetch the most recent Sales/Trends Daily Summary report and return it as a
-hash of array references. The returned hash has four elements: I<header>, 
-I<data>, I<file> and I<filename>. The I<header> element is an array of the 
-column headers in the fetched TSV file. The I<data> element is an array of 
-array references, one for each non-header line in the fetched TSV file. The 
+hash of array references. The returned hash has two elements in addition to the 
+elements returned by I<parse_sales_summary>: I<file> and I<filename>. The 
 I<file> element is the raw content of the file retrieved from iTunes Connect 
 and the I<filename> element is the filename provided by the Content-Disposition 
 header line.
@@ -534,10 +541,8 @@ each report.
 =item $itc->monthly_free_summary( %options )
 
 Fetch the most recent Sales/Trends Monthly Summary report and return it as a
-hash of array references. The returned hash has four elements: I<header>, 
-I<data>, I<file> and I<filename>. The I<header> element is an array of the 
-column headers in the fetched TSV file. The I<data> element is an array of 
-array references, one for each non-header line in the fetched TSV file. The 
+hash of array references. The returned hash has two elements in addition to the 
+elements returned by I<parse_sales_summary>: I<file> and I<filename>. The 
 I<file> element is the raw content of the file retrieved from iTunes Connect 
 and the I<filename> element is the filename provided by the Content-Disposition 
 header line.
@@ -557,10 +562,8 @@ Dates are sorted in descending order.
 =item $itc->weekly_sales_summary()
 
 Fetch the most recent Sales/Trends Weekly Summary report and return it as a
-hash of array references. The returned hash has four elements: I<header>, 
-I<data>, I<file> and I<filename>. The I<header> element is an array of the 
-column headers in the fetched TSV file. The I<data> element is an array of 
-array references, one for each non-header line in the fetched TSV file. The 
+hash of array references. The returned hash has two elements in addition to the 
+elements returned by I<parse_sales_summary>: I<file> and I<filename>. The 
 I<file> element is the raw content of the file retrieved from iTunes Connect 
 and the I<filename> element is the filename provided by the Content-Disposition 
 header line.
