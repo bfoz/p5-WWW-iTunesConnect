@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.4 2008/12/06 21:18:46 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.5 2009/01/02 01:18:03 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -93,6 +93,7 @@ sub daily_sales_summary_dates
 
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
     my $form = $s->daily_sales_summary_form();
+    return undef unless $form;
 # Pull the available dates out of the form's select input
     my $input = $form->find_input('9.11.1', 'option');
     return undef unless $input;
@@ -173,6 +174,7 @@ sub daily_sales_summary_form
 # Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
 #  and submit it to get a list of available Daily Summary dates.
         my $form = $s->sales_form();
+        return undef unless $form;
         $form->value('9.7', 'Summary');
         $form->value('9.9', 'Daily');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
@@ -193,7 +195,7 @@ sub sales_form
     my $s = shift;
 
 # Fetch the Sales/Trend Report page
-    my $r = $s->sales_reponse();
+    my $r = $s->sales_response();
     return undef unless $r;
 
     my @forms = HTML::Form->parse($r);
@@ -203,12 +205,12 @@ sub sales_form
 }
 
 # Follow the Sales/Trend Reports redirect and store the response for later use
-sub sales_reponse
+sub sales_response
 {
     my $s = shift;
 
 # Returned cached response to avoid another trip on the net
-    return $s->{sales_reponse} if $s->{sales_reponse};
+    return $s->{sales_response} if $s->{sales_response};
 
 # Check for a valid login
     return undef unless $s->login;
@@ -217,7 +219,15 @@ sub sales_reponse
     my $r = $s->request($s->{sales_path});
     $r->as_string =~ /<META HTTP-EQUIV="refresh" Content="0;URL=(.*)">/;
     $r = $s->{ua}->get($1);
-    $s->{sales_reponse} = $r;
+# The redirect asks for the user info again
+    my @forms = HTML::Form->parse($r);
+    return undef unless @forms;
+    my $form = shift @forms;	# Only one form on the page
+    $form->value('theAccountName', $s->{user});
+    $form->value('theAccountPW', $s->{password});
+    $r = $s->{ua}->request($form->click('1.Continue'));
+    return undef unless $r;
+    $s->{sales_response} = $r;
 }
 
 # --- Internal use only ---
