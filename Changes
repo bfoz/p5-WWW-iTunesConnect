@@ -1,5 +1,12 @@
 Revision history for Perl extension WWW::iTunesConnect.
 
+1.08  Fri Jan  2 2009 10:00:00
+	- Switch to using CVS Id tag for versioning
+	- Add support for the second login page for Sales/Trend reports
+	- Add support for fetching Sales/Trend Weekly Summary reports
+	- Add support for fetching Sales/Trend Monthly Free reports
+	- Add parse_sales_summary() class method for parsing a summary file into a hash
+
 0.02  Sat Dec  6 
 	- Updates to form element names because Apple updated the pages
 

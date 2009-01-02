@@ -1,4 +1,4 @@
-WWW-iTunesConnect version 0.02
+WWW-iTunesConnect version 1.008
 ==============================
 
 The WWW::iTunesConnect module is an interface to Apple's iTunes Connect service.
@@ -20,11 +20,12 @@ DEPENDENCIES
 
 This module requires these other modules and libraries:
 
-  blah blah blah
+    LWP
+    HTML::Form
+    IO::Uncompress::Gunzip
+    Net::SSLeay
 
 COPYRIGHT AND LICENCE
-
-Put the correct copyright and licence information here.
 
 Copyright (C) 2008 by Brandon Fosdick
 
