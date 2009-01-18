@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.8 2009/01/02 05:41:05 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.9 2009/01/18 20:32:00 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -82,6 +82,7 @@ sub login
 # Pull out the path for submitting user credentials
     $r->as_string =~ /<form.*name=.*action="(.*)">/;
 #    $s->{login_url} = $1;
+    return undef unless $1;
 # Submit the user's credentials
     $r = $s->request($1.'?theAccountName='.$s->{user}.'&theAccountPW='.$s->{password}.'&theAuxValue=');
     return undef unless $r;
@@ -409,14 +410,6 @@ sub sales_response
     my $r = $s->request($s->{sales_path});
     $r->as_string =~ /<META HTTP-EQUIV="refresh" Content="0;URL=(.*)">/;
     $r = $s->{ua}->get($1);
-# The redirect asks for the user info again
-    my @forms = HTML::Form->parse($r);
-    return undef unless @forms;
-    my $form = shift @forms;	# Only one form on the page
-    $form->value('theAccountName', $s->{user});
-    $form->value('theAccountPW', $s->{password});
-    $r = $s->{ua}->request($form->click('1.Continue'));
-    return undef unless $r;
     $s->{sales_response} = $r;
 }
 
