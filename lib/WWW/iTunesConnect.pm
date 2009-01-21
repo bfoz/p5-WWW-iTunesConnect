@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.9 2009/01/18 20:32:00 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.10 2009/01/21 07:45:14 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,13 +12,17 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
+use HTML::TreeBuilder;
 use IO::Uncompress::Gunzip qw(gunzip $GunzipError);
 
 use constant URL_PHOBOS => 'https://phobos.apple.com';
+use constant MONTH_2_NUM => { 'Jan' => '01', 'Feb' => '02', 'Mar' => '03', 'Apr' => '04',
+                              'May' => '05', 'Jun' => '06', 'Jul' => '07', 'Aug' => '08',
+                              'Sep' => '09', 'Oct' => '10', 'Nov' => '11', 'Dec' => '12' };
 
 # --- Constructor ---
 
@@ -40,6 +44,24 @@ sub new
 
 # --- Class Methods ---
 
+# Parse a TSV data table retrieved from iTunes Connect
+sub parse_table
+{
+    my ($content) = @_;
+
+# Parse the data into a hash of arrays
+    my @content = split /\n/,$content;
+    my @header = split /\t/, shift(@content);
+    my @data;
+    for( @content )
+    {
+	my @a = split /\t/;
+	push @data, \@a;
+    }
+
+    ('header', \@header, 'data', \@data);
+}
+
 # Parse a gzip'd summary file fetched from the Sales/Trend page
 #  First argument is same as input argument to gunzip constructor
 #  Remaining arguments are passed as options to gunzip
@@ -52,17 +74,8 @@ sub parse_sales_summary
     my $status = gunzip $input => \$content;
     return $status unless $status;
 
-# Parse the data into a hash of arrays
-    my @content = split /\n/,$content;
-    my @header = split /\t/, shift(@content);
-    my @data;
-    for( @content )
-    {
-        my @a = split /\t/;
-        push @data, \@a;
-    }
-
-    ('header', \@header, 'data', \@data);
+# Parse the data into a hash of array refs and return
+    parse_table($content);
 }
 
 # --- Instance Methods ---
@@ -93,26 +106,6 @@ sub login
     $r->as_string =~ /href="(.*)">\s*\n\s*<b>Financial Reports<\/b>/;
     $s->{financial_path} = $1;
     1;
-}
-
-sub financial_report
-{
-    my $s = shift;
-
-# Check for a valid login
-    return undef unless $s->login;
-
-# Fetch the Financial Reports page
-    my $r = $s->request($s->{sales_path});
-    return undef unless $r;
-# Generate forms
-    my @forms = HTML::Form->parse($r);
-# Find the desired form
-    @forms = grep $_->attr('name') eq 'f_0_0_5_1_5_1_1_2_3', @forms;
-    return undef unless @forms;
-    my $form = shift @forms;
-# Get the most recent report
-# Parse and return
 }
 
 # Fetch the list of available dates for Sales/Trend Daily Summary Reports. This
@@ -164,6 +157,121 @@ sub daily_sales_summary
     $filename = (split(/=/, $filename))[1] if $filename;
 
     (parse_sales_summary(\$r->content), 'file', $r->content, 'filename', $filename);
+}
+
+# Fetch the list of available financial reports
+sub financial_report_list
+{
+    my $s = shift;
+
+# Return cached list to avoid another trip on the net
+    return $s->{financial_reports} if $s->{financial_reports};
+
+# Check for a valid login
+    return undef unless $s->login;
+
+# Fetch the Financial Reports page
+    my $r = $s->request($s->{financial_path});
+    return undef unless $r;
+
+# Get the Items/Page form and set to display the max number of reports
+    my @forms = HTML::Form->parse($r);
+    @forms = grep $_->attr('name') eq 'f_0_0_5_1_5_1_1_2_9', @forms;
+    return undef unless @forms;
+    my $form = shift @forms;
+    $r->as_string =~ /items\/page \(max (\d+)\)/;
+    $form->value('itemsPerPage', $1);
+    $r = $s->{ua}->request($form->click);
+    return undef unless $r;
+
+# Parse the page into a tree
+    my $tree = HTML::TreeBuilder->new_from_content($r->as_string);
+
+    # Get the table by address (because there's nothing unique about it) and then get all child rows
+    my @rows = $tree->address('0.1.2.0.0.0.3.1.1')->look_down('_tag','tr');
+    # The first 3 rows are headers, etc so get rid of them
+    @rows = @rows[3..$#rows];
+
+# Parse the list of reports
+    my %reports;
+    for( @rows )
+    {
+	my @cols = $_->look_down('_tag','td');
+	$cols[0]->as_trimmed_text =~ /([A-Z][a-z]{2})\s+(\d{4})/;
+	my $date = $2.MONTH_2_NUM->{$1};
+	my $region = $cols[1]->as_trimmed_text;
+	my $a = scalar $cols[2]->look_down('_tag','a');
+	@{$reports{$date}{$region}}{qw(path filename)} = ($a->attr('href'), $a->as_trimmed_text);
+    }
+
+# Save the list for later and return
+    $s->{financial_reports} = \%reports;
+}
+
+sub financial_report
+{
+    my $s = shift;
+    my $date = shift if scalar @_;
+    return undef if $date and ($date !~ /\d{4}\d{2}/);
+
+# Get the list of available reports
+    my %reports = %{$s->financial_report_list()};
+
+# Get the most recent month's reports if no month was given
+    unless( $date )
+    {
+	my @dates = sort { $b <=> $a } keys %reports;
+	$date = shift @dates;
+	return undef unless $date;
+    }
+
+# Fetch the reports for either the given month or the most recent month available    
+    my $regions = $reports{$date};
+    my %out;
+    for( keys %{$regions} )
+    {
+	my $r = $s->request($regions->{$_}{path});
+	next unless $r;
+
+	# Parse the data
+	my %table = parse_table($r->content);
+	my ($header, $data) = @table{qw(header data)};
+
+	# Strip off the Total row and parse it
+	my @total = grep {$_ && length $_} @{$data->[-1]};
+	@total = undef unless shift(@total) eq 'Total';
+	if( @total )
+	{
+	    pop @$data;  # Remove the Total row from the data
+	    pop @$data;  # Discard the blank row
+	}
+
+	# Convert the various region-specific date formats to YYYYMMDD
+	my $startIndex = 0;
+	my $endIndex = 0;
+	++$startIndex while $header->[$startIndex] ne 'Start Date';
+	++$endIndex while $header->[$endIndex] ne 'End Date';
+	my $eu_reg = qr/(\d\d)\.(\d\d)\.(\d{4})/;
+	my $us_reg = qr/(\d\d)\/(\d\d)\/(\d{4})/;
+	for( @$data )
+	{
+	    if( @$_[$startIndex] =~ $eu_reg )       # EU format
+	    {
+		@$_[$startIndex] = $3.$2.$1;
+		@$_[$endIndex] =~ $eu_reg;
+		@$_[$endIndex] = $3.$2.$1;
+	    }
+	    elsif( @$_[$startIndex] =~ $us_reg )    # US format
+	    {
+		@$_[$startIndex] = $3.$1.$2;
+		@$_[$endIndex] =~ $us_reg;
+		@$_[$endIndex] = $3.$1.$2;
+	    }
+	}
+
+	@{$out{$date}{$_}}{qw(header data file filename total currency)} = ($header, $data, $r->content, $regions->{$_}{filename}, @total);
+    }
+    %out;   # Return
 }
 
 # Fetch the list of available dates for Sales/Trend Monthly Summary Reports. This
@@ -521,6 +629,28 @@ header line.
 
 If a single string argument is given in the form 'MM/DD/YYYY' that date will be
 fetched instead (if it's available).
+
+=item $itc->financial_report_list()
+
+Fetch the list of available Financial Reports. This caches the returned results 
+and can be safely called multiple times.
+
+=item $itc->financial_report()
+
+Fetch the most recent Financial Report and return it as a hash of array 
+references. The returned hash has six elements:
+
+    Key		Description
+    ---------------------------------------------
+    currency	Currency code
+    data	Reference to array of report rows
+    file	Content of the retrieved file
+    filename	Retrieved file name
+    header	Header row
+    total	Sum of all rows in data
+
+If a single string argument is given in the form 'YYYYMM' that month's report 
+will be fetched instead (if it's available).
 
 =item $itc->monthly_free_summary_dates
 
