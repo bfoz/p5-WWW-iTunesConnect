@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.11 2009/01/22 05:01:22 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.12 2009/01/22 05:23:57 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -546,9 +546,11 @@ iTunesConnect - An iTunesConnect client interface
 =head1 DESCRIPTION
 
 C<iTunesConnect> provides an interface to Apple's iTunes Connect website.
-For now only the previous day's daily sales summary can be retrieved. This is 
-just a quick first cut that I whipped up to avoid losing any data. Eventually 
-this will be a complete interface.
+Daily, Weekly and Monthly summaries, as well as Finanacial Reports, can be
+retrieved. Eventually this will become a complete interface.
+
+A script suitable for use as a nightly cronjob can be found at 
+L<http://bfoz.net/projects/itc/>
 
 =head1 CONSTRUCTOR
 
@@ -578,6 +580,8 @@ before calling any other methods.
 =back
 
 =head1 Class Methods
+
+=over
 
 =item %report = WWW::iTunesConnect->parse_sales_summary($input, %options)
 
@@ -637,19 +641,21 @@ and can be safely called multiple times.
 
 =item $itc->financial_report()
 
-Fetch the most recent Financial Report and return it as a hash of array 
-references. The returned hash has six elements:
+Fetch the most recent Financial Report and return it as a hash. The keys of the 
+returned hash are of the form 'YYYYMM', each of which is a hash containing one 
+entry for each region included in that month's report. Each of the region 
+entries is a yet another hash with six elements:
 
     Key		Description
     ---------------------------------------------
     currency	Currency code
     data	Reference to array of report rows
-    file	Content of the retrieved file
+    file	Raw content of the retrieved file
     filename	Retrieved file name
     header	Header row
     total	Sum of all rows in data
 
-If a single string argument is given in the form 'YYYYMM' that month's report 
+If a single string argument is given in the form 'YYYYMM', that month's report 
 will be fetched instead (if it's available).
 
 =item $itc->monthly_free_summary_dates
