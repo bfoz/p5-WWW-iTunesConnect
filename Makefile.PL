@@ -7,6 +7,7 @@ WriteMakefile(
     DISTNAME          => 'p5-WWW-iTunesConnect',
     VERSION_FROM      => 'lib/WWW/iTunesConnect.pm', # finds $VERSION
     PREREQ_PM         => { 'HTML::Form'             => 0,
+                           'HTML::Tree'             => 0,
                            'IO::Uncompress::Gunzip' => 0,
                            'Net::SSLeay'            => 0,
                            'LWP'                    => 0,
