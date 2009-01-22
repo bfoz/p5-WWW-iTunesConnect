@@ -4,7 +4,7 @@
 #
 # Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
-# $Id: iTunesConnect.pm,v 1.10 2009/01/21 07:45:14 bfoz Exp $
+# $Id: iTunesConnect.pm,v 1.11 2009/01/22 05:01:22 bfoz Exp $
 
 package WWW::iTunesConnect;
 
@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use vars qw($VERSION);
 
-$VERSION = sprintf("%d.%03d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+$VERSION = sprintf("%d.%03d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
 
 use LWP;
 use HTML::Form;
@@ -700,6 +700,7 @@ on the given date will be fetched instead (if it's available).
 
 L<LWP>
 L<HTML::Form>
+L<HTML::Tree>
 L<IO::Uncompress::Gunzip>
 L<Net::SSLeay>
 
