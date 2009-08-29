@@ -2,7 +2,7 @@
 #
 # iTunes Connect client interface
 #
-# Copyright 2008 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
+# Copyright 2008-2009 Brandon Fosdick <bfoz@bfoz.net> (BSD License)
 #
 # $Id: iTunesConnect.pm,v 1.12 2009/01/22 05:23:57 bfoz Exp $
 
@@ -716,7 +716,7 @@ Brandon Fosdick, E<lt>bfoz@bfoz.netE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2008 Brandon Fosdick <bfoz@bfoz.net>
+Copyright 2008-2009 Brandon Fosdick <bfoz@bfoz.net>
 
 This software is provided under the terms of the BSD License.
 
