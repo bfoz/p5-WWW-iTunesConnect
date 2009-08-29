@@ -120,7 +120,7 @@ sub daily_sales_summary_dates
     my $form = $s->daily_sales_summary_form();
     return undef unless $form;
 # Pull the available dates out of the form's select input
-    my $input = $form->find_input('9.11.1', 'option');
+    my $input = $form->find_input('#dayorweekdropdown', 'option');
     return undef unless $input;
 # Sort and return the dates
     sort { $b cmp $a } $input->possible_values;
@@ -144,9 +144,9 @@ sub daily_sales_summary
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
     my $form = $s->daily_sales_summary_form();
 # Submit the form to get the latest daily summary
-    $form->value('9.7', 'Summary');
-    $form->value('9.9', 'Daily');
-    $form->value('9.11.1', $date);
+    $form->value('#selReportType', 'Summary');
+    $form->value('#selDateType', 'Daily');
+    $form->value('#dayorweekdropdown', $date);
     $form->value('hiddenDayOrWeekSelection', $date);
     $form->value('hiddenSubmitTypeName', 'Download');
     $form->value('download', 'Download');
@@ -319,9 +319,9 @@ sub monthly_free_summary
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
     my $form = $s->monthly_free_summary_form();
 # Submit the form to get the latest weekly summary
-    $form->value('9.7', 'Summary');
-    $form->value('9.9', 'Monthly Free');
-    $form->value('9.14.1', $month);
+    $form->value('#selReportType', 'Summary');
+    $form->value('#selDateType', 'Monthly Free');
+    $form->value('#dayorweekdropdown', $month);
     $form->value('hiddenDayOrWeekSelection', $month);
     $form->value('hiddenSubmitTypeName', 'Download');
     $form->value('download', 'Download');
@@ -348,7 +348,7 @@ sub weekly_sales_summary_dates
     my $form = $s->weekly_sales_summary_form();
     return undef unless $form;
 # Pull the available date ranges out of the form's select input
-    my $input = $form->find_input('9.13.1', 'option');
+    my $input = $form->find_input('#dayorweekdropdown', 'option');
     return undef unless $input;
 # Parse the strings into an array of hash references
     my @dates;
@@ -376,9 +376,9 @@ sub weekly_sales_summary
 # Get an HTML::Form object for the Sales/Trends Reports Daily Summary page
     my $form = $s->weekly_sales_summary_form();
 # Submit the form to get the latest weekly summary
-    $form->value('9.7', 'Summary');
-    $form->value('9.9', 'Weekly');
-    $form->value('9.13.1', $week);
+    $form->value('#selReportType', 'Summary');
+    $form->value('#selDateType', 'Weekly');
+    $form->value('#dayorweekdropdown', $week);
     $form->value('hiddenDayOrWeekSelection', $week);
     $form->value('hiddenSubmitTypeName', 'Download');
     $form->value('download', 'Download');
@@ -419,8 +419,8 @@ sub daily_sales_summary_form
 #  and submit it to get a list of available Daily Summary dates.
         my $form = $s->sales_form();
         return undef unless $form;
-        $form->value('9.7', 'Summary');
-        $form->value('9.9', 'Daily');
+        $form->value('#selReportType', 'Summary');
+        $form->value('#selDateType', 'Daily');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
         $s->{daily_summary_sales_response} = $r;
@@ -446,8 +446,8 @@ sub monthly_free_summary_form
 #  and submit it to get a list of available Monthly Summary dates.
         my $form = $s->sales_form();
         return undef unless $form;
-        $form->value('9.7', 'Summary');
-        $form->value('9.9', 'Monthly Free');
+        $form->value('#selReportType', 'Summary');
+        $form->value('#selDateType', 'Monthly Free');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
         $s->{monthly_summary_free_response} = $r;
@@ -473,8 +473,8 @@ sub weekly_sales_summary_form
 #  and submit it to get a list of available Weekly Summary dates.
         my $form = $s->sales_form();
         return undef unless $form;
-        $form->value('9.7', 'Summary');
-        $form->value('9.9', 'Weekly');
+        $form->value('#selReportType', 'Summary');
+        $form->value('#selDateType', 'Weekly');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
         $s->{weekly_summary_sales_response} = $r;

@@ -10,7 +10,7 @@ WriteMakefile(
                            'HTML::Tree'             => 0,
                            'IO::Uncompress::Gunzip' => 0,
                            'Net::SSLeay'            => 0,
-                           'LWP'                    => 0,
+                           'LWP'                    => 5.829,
                          },
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
       (ABSTRACT_FROM  => 'lib/WWW/iTunesConnect.pm', # retrieve abstract from module
