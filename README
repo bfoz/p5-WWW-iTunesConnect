@@ -1,10 +1,10 @@
-WWW-iTunesConnect version 1.008
+WWW-iTunesConnect
 ==============================
 
 The WWW::iTunesConnect module is an interface to Apple's iTunes Connect service.
-This initial release can fetch Sales/Trends Daily Summary reports provided by 
-Apple to developers selling on the iTunes/App store. For an example nightly 
-script that makes use of WWW::iTunesConnect please see 
+This initial release can fetch Sales/Trends Daily Summary reports provided by
+Apple to developers selling on the iTunes/App store. For an example nightly
+script that makes use of WWW::iTunesConnect please see
 http://bfoz.net/projects/itc/.
 
 INSTALLATION

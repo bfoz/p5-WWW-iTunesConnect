@@ -1,5 +1,10 @@
 Revision history for Perl extension WWW::iTunesConnect.
 
+1.13  Sat Aug 29 2009 12:30:00
+	- Require LWP 5.829
+	- Find form inputs using id instead of name
+	- Manually assign version numbers (migrated from CVS to git)
+
 1.12  Wed Jan 21 2009 21:30:00
 	- Add support for fetching Financial Reports
 	- Apple seems to have dropped the extra sign-in page for Sales/Trend Reports
@@ -12,10 +17,9 @@ Revision history for Perl extension WWW::iTunesConnect.
 	- Add support for fetching Sales/Trend Monthly Free reports
 	- Add parse_sales_summary() class method for parsing a summary file into a hash
 
-0.02  Sat Dec  6 
+0.02  Sat Dec  6
 	- Updates to form element names because Apple updated the pages
 
 0.01  Sat Nov 15 19:21:04 2008
 	- original version; created by h2xs 1.23 with options
 		-AX --skip-exporter --use-new-tests -m WWW::iTunesConnect
-
