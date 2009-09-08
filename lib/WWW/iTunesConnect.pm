@@ -176,7 +176,7 @@ sub financial_report_list
 
 # Get the Items/Page form and set to display the max number of reports
     my @forms = HTML::Form->parse($r);
-    @forms = grep $_->attr('name') eq 'f_0_0_5_1_5_1_1_2_9', @forms;
+    @forms = grep $_->find_input('itemsPerPage', 'text'), @forms;
     return undef unless @forms;
     my $form = shift @forms;
     $r->as_string =~ /items\/page \(max (\d+)\)/;
