@@ -38,6 +38,9 @@ sub new
 
     $self->{ua} = LWP::UserAgent->new(%options);
     $self->{ua}->cookie_jar({});
+    # Allow POST requests to be redirected because some of the international
+    #  iTC mirrors redirect various requests
+    push @{ $self->{ua}->requests_redirectable}, 'POST';
 
     return $self;
 }
