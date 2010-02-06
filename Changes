@@ -1,5 +1,11 @@
 Revision history for Perl extension WWW::iTunesConnect.
 
+1.14  Sat Feb  6 2010 17:35
+	- Update copright notice and iTC-tools link
+	- Allow POST requests to be redirected
+	- Check results from internal functions and return undef on error
+	- Don't search for the financial report form by name
+
 1.13  Sat Aug 29 2009 12:30:00
 	- Require LWP 5.829
 	- Find form inputs using id instead of name
