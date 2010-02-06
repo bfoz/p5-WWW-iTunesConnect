@@ -5,7 +5,7 @@ The WWW::iTunesConnect module is an interface to Apple's iTunes Connect service.
 This initial release can fetch Sales/Trends Daily Summary reports provided by
 Apple to developers selling on the iTunes/App store. For an example nightly
 script that makes use of WWW::iTunesConnect please see
-http://bfoz.net/projects/itc/.
+http://github.com/bfoz/itunesconnect-tools.
 
 INSTALLATION
 
@@ -28,7 +28,7 @@ This module requires these other modules and libraries:
 
 COPYRIGHT AND LICENCE
 
-Copyright (C) 2008-2009 by Brandon Fosdick
+Copyright (C) 2008-2010 by Brandon Fosdick
 
 This library is free software; you can redistribute it and/or modify
 it under the terms of the BSD License.
