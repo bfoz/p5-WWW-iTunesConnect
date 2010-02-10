@@ -504,6 +504,7 @@ sub sales_form
 # Fetch the Sales/Trend Report page
     my $r = $s->sales_response();
     return undef unless $r;
+    return undef if $r->is_error;   # Check the response code
 
     my @forms = HTML::Form->parse($r);
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
