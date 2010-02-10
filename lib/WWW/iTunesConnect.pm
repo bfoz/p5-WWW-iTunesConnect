@@ -103,7 +103,7 @@ sub login
     $r = $s->request($1.'?theAccountName='.$s->{user}.'&theAccountPW='.$s->{password}.'&theAuxValue=');
     return undef unless $r;
 # Find the Sales/Trend Reports path and save it for later
-    $r->as_string =~ /href="(.*)">\s*\n\s*<b>Sales\/Trend Reports<\/b>/;
+    $r->as_string =~ /href="(.*)">\s*\n\s*<b>Sales and Trends<\/b>/;
     $s->{sales_path} = $1;
 # Find the Financial Reports path and save it for later
     $r->as_string =~ /href="(.*)">\s*\n\s*<b>Financial Reports<\/b>/;
