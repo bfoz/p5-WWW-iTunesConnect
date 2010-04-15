@@ -558,8 +558,8 @@ C<iTunesConnect> provides an interface to Apple's iTunes Connect website.
 Daily, Weekly and Monthly summaries, as well as Finanacial Reports, can be
 retrieved. Eventually this will become a complete interface.
 
-A script suitable for use as a nightly cronjob can be found at 
-L<http://bfoz.net/projects/itc/>
+A script suitable for use as a nightly cronjob can be found at
+L<http://github.com/bfoz/itunesconnect-tools>
 
 =head1 CONSTRUCTOR
 
