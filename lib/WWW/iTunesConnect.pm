@@ -114,12 +114,12 @@ sub login
 	return undef;	# Bail out until the developer handles the message
     }
 
-# Find the Sales/Trend Reports path and save it for later
-    $r->as_string =~ /href="(.*)">\s*\n\s*<b>Sales and Trends<\/b>/;
-    $s->{sales_path} = $1;
-# Find the Financial Reports path and save it for later
-    $r->as_string =~ /href="(.*)">\s*\n\s*<b>Financial Reports<\/b>/;
-    $s->{financial_path} = $1;
+    # Find the Sales/Trend Reports path and save it for later
+    $s->{sales_path} = $tree->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Sales and Trends'})->attr('href');
+
+    # Find the Financial Reports path and save it for later
+    $s->{financial_path} = $tree->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Financial Reports'})->attr('href');
+
     1;
 }
 
