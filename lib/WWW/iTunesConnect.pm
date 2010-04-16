@@ -102,6 +102,18 @@ sub login
 # Submit the user's credentials
     $r = $s->request($1.'?theAccountName='.$s->{user}.'&theAccountPW='.$s->{password}.'&theAuxValue=');
     return undef unless $r;
+
+    # Parse the page into a tree
+    my $tree = HTML::TreeBuilder->new_from_content($r->as_string);
+
+    # Look for any notifications that Apple may be trying to send to the developer
+    my @notifications = $tree->look_down('_tag', 'div', 'class', 'simple-notification');
+    if( @notifications )
+    {
+	push @{$s->{login_notifications}}, $_->as_HTML for @notifications;
+	return undef;	# Bail out until the developer handles the message
+    }
+
 # Find the Sales/Trend Reports path and save it for later
     $r->as_string =~ /href="(.*)">\s*\n\s*<b>Sales and Trends<\/b>/;
     $s->{sales_path} = $1;
