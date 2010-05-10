@@ -16,6 +16,11 @@ To install this module type the following:
    make test
    make install
 
+FreeBSD users can install from the ports system:
+
+    cd /usr/ports/www/p5-WWW-iTunesConnect
+    make install clean
+
 DEPENDENCIES
 
 This module requires these other modules and libraries:
