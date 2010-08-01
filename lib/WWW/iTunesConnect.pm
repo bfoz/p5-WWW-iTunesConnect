@@ -96,12 +96,17 @@ sub login
     my $r = $s->request('/WebObjects/MZLabel.woa/wa/default');
     return undef unless $r;
     $s->{login_page} = $r->content;
-# Pull out the path for submitting user credentials
-    $r->as_string =~ /<form.*name=.*action="(.*)">/;
-    $s->{login_url} = $1;
-    return undef unless $1;
+# Find the login form
+    my @forms = HTML::Form->parse($r);
+    @forms = grep $_->attr('name') eq 'appleConnectForm', @forms;
+    return undef unless @forms;
+    $s->{login_form} = shift @forms;
+    return undef unless $s->{login_form};
+
 # Submit the user's credentials
-    $s->{login_response} = $s->request($1.'?theAccountName='.$s->{user}.'&theAccountPW='.$s->{password}.'&theAuxValue=');
+    $s->{login_form}->value('#accountname', $s->{user});
+    $s->{login_form}->value('#accountpassword', $s->{password});
+    $s->{login_response} = $s->{ua}->request($s->{login_form}->click('1.Continue'));
     return undef unless $s->{login_response};
 
     # Parse the page into a tree
