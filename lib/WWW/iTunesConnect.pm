@@ -211,8 +211,18 @@ sub financial_report_list
 # Parse the page into a tree
     my $tree = HTML::TreeBuilder->new_from_content($r->as_string);
 
-    # Get the table by address (because there's nothing unique about it) and then get all child rows
-    my @rows = $tree->address('0.1.2.0.0.0.3.1.1')->look_down('_tag','tr');
+    # Find the table of financial reports by finding the 'itemsPerPage' input
+    #  element and then looking upwards to find the enclosing table. Then find
+    #  the table that encloses that one.
+    my $input = $tree->look_down('_tag', 'input', 'name', 'itemsPerPage');
+    return undef unless $input;
+    my $table = $input->look_up('_tag', 'table');
+    return undef unless $table;
+    $table = $table->parent->look_up('_tag', 'table');
+    return undef unless $table;
+
+    # Now find the rows for the list of financial reports
+    my @rows = $table->look_down('_tag','tr');
     # The first 3 rows are headers, etc so get rid of them
     @rows = @rows[3..$#rows];
 
