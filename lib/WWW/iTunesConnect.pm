@@ -126,11 +126,8 @@ sub login
 	return undef;	# Bail out until the developer handles the message
     }
 
-    # Find the Sales/Trend Reports path and save it for later
-    $s->{sales_path} = $tree->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Sales and Trends'})->attr('href');
-
-    # Find the Financial Reports path and save it for later
-    $s->{financial_path} = $tree->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Financial Reports'})->attr('href');
+    # Save the parsed main menu tree for later
+    $s->{main_menu_tree} = $tree;
 
     1;
 }
@@ -195,8 +192,17 @@ sub financial_report_list
 # Return cached list to avoid another trip on the net
     return $s->{financial_reports} if $s->{financial_reports};
 
-# Check for a valid login
-    return undef unless $s->login;
+    unless( $s->{financial_path} )
+    {
+	# Nothing to do without the main menu
+	return undef unless $s->{main_menu_tree};
+
+	# Find the Fincial Reports path that's listed on the main menu
+	my $element = $s->{main_menu_tree}->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Financial Reports'});
+	return undef unless $element;
+	$s->{financial_path} = $element->attr('href');
+	return undef unless $s->{financial_path};
+    }
 
 # Fetch the Financial Reports page
     my $r = $s->request($s->{financial_path});
@@ -536,7 +542,7 @@ sub sales_form
     shift @forms;
 }
 
-# Follow the Sales/Trend Reports redirect and store the response for later use
+# Follow the Sales and Trends redirect and store the response for later use
 sub sales_response
 {
     my $s = shift;
@@ -544,13 +550,26 @@ sub sales_response
 # Returned cached response to avoid another trip on the net
     return $s->{sales_response} if $s->{sales_response};
 
-# Check for a valid login
-    return undef unless $s->login;
+    unless( $s->{sales_path} )
+    {
+	# Nothing to do without the main menu
+	return undef unless $s->{main_menu_tree};
 
-# Handle the Sales/Trend Reports redirect 
+	# Find the Sales and Trends path that's listed on the main menu
+	my $element = $s->{main_menu_tree}->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Sales and Trends'});
+	return undef unless $element;
+	$s->{sales_path} = $element->attr('href');
+	return undef unless $s->{sales_path};
+    }
+
+# Handle the Sales and Trends page redirect
     my $r = $s->request($s->{sales_path});
+    return undef unless $r;
+
     $r->as_string =~ /<META HTTP-EQUIV="refresh" Content="0;URL=(.*)">/;
     $r = $s->{ua}->get($1);
+    return undef unless $r;
+
     $s->{sales_response} = $r;
 }
 
