@@ -95,16 +95,17 @@ sub login
 # Fetch the login page
     my $r = $s->request('/WebObjects/MZLabel.woa/wa/default');
     return undef unless $r;
+    $s->{login_page} = $r->content;
 # Pull out the path for submitting user credentials
     $r->as_string =~ /<form.*name=.*action="(.*)">/;
-#    $s->{login_url} = $1;
+    $s->{login_url} = $1;
     return undef unless $1;
 # Submit the user's credentials
-    $r = $s->request($1.'?theAccountName='.$s->{user}.'&theAccountPW='.$s->{password}.'&theAuxValue=');
-    return undef unless $r;
+    $s->{login_response} = $s->request($1.'?theAccountName='.$s->{user}.'&theAccountPW='.$s->{password}.'&theAuxValue=');
+    return undef unless $s->{login_response};
 
     # Parse the page into a tree
-    my $tree = HTML::TreeBuilder->new_from_content($r->as_string);
+    my $tree = HTML::TreeBuilder->new_from_content($s->{login_response}->as_string);
 
     # Look for any notifications that Apple may be trying to send to the developer
     my @notifications = $tree->look_down('_tag', 'div', 'class', 'simple-notification');
