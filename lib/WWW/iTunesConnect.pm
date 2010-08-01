@@ -192,20 +192,8 @@ sub financial_report_list
 # Return cached list to avoid another trip on the net
     return $s->{financial_reports} if $s->{financial_reports};
 
-    unless( $s->{financial_path} )
-    {
-	# Nothing to do without the main menu
-	return undef unless $s->{main_menu_tree};
-
-	# Find the Fincial Reports path that's listed on the main menu
-	my $element = $s->{main_menu_tree}->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Financial Reports'});
-	return undef unless $element;
-	$s->{financial_path} = $element->attr('href');
-	return undef unless $s->{financial_path};
-    }
-
 # Fetch the Financial Reports page
-    my $r = $s->request($s->{financial_path});
+    my $r = $s->financial_response();
     return undef unless $r;
 
 # Get the Items/Page form and set to display the max number of reports
@@ -540,6 +528,32 @@ sub sales_form
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
     shift @forms;
+}
+
+# Fetch the Financial Reports page and cache the response
+sub financial_response
+{
+    my $s = shift;
+
+# Returned the cached response to avoid another trip on the net
+    return $s->{financial_response} if $s->{financial_response};
+
+    unless( $s->{financial_path} )
+    {
+	# Nothing to do without the main menu
+	return undef unless $s->{main_menu_tree};
+
+	# Find the Fincial Reports path that's listed on the main menu
+	my $element = $s->{main_menu_tree}->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Financial Reports'});
+	return undef unless $element;
+	$s->{financial_path} = $element->attr('href');
+	return undef unless $s->{financial_path};
+    }
+
+    my $r = $s->request($s->{financial_path});
+    return undef unless $r;
+
+    $s->{financial_response} = $r;
 }
 
 # Follow the Sales and Trends redirect and store the response for later use
