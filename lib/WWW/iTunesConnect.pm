@@ -112,6 +112,12 @@ sub login
     # Parse the page into a tree
     my $tree = HTML::TreeBuilder->new_from_content($s->{login_response}->as_string);
 
+    # Look for a failed login notification. The login response doesn't set any
+    #  error codes on failure; it merely displays a notice to the user. Try to
+    #  detect the notice by looking for a span tag with class dserror.
+    my @failure = $tree->look_down('_tag', 'span', 'class', 'dserror');
+    return undef if @failure;	# Bail out
+
     # Look for any notifications that Apple may be trying to send to the developer
     my @notifications = $tree->look_down('_tag', 'div', 'class', 'simple-notification');
     if( @notifications )
