@@ -90,7 +90,7 @@ sub login
 # Bail out if no username and password
     return undef unless $s->{user} and $s->{password};
 # Prevent repeat logins
-    return 1 if $s->{sales_path} and $s->{financial_path};
+    return 1 if $s->{login_response} and !($s->{login_response}->is_error);
 
 # Fetch the login page
     my $r = $s->request('/WebObjects/MZLabel.woa/wa/default');
@@ -107,7 +107,7 @@ sub login
     $s->{login_form}->value('#accountname', $s->{user});
     $s->{login_form}->value('#accountpassword', $s->{password});
     $s->{login_response} = $s->{ua}->request($s->{login_form}->click('1.Continue'));
-    return undef unless $s->{login_response};
+    return undef unless $s->{login_response} and !($s->{login_response}->is_error);
 
     # Parse the page into a tree
     my $tree = HTML::TreeBuilder->new_from_content($s->{login_response}->as_string);
