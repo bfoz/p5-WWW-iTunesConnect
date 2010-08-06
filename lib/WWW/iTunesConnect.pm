@@ -207,6 +207,7 @@ sub financial_report_list
     $form->value('itemsPerPage', $1);
     $r = $s->{ua}->request($form->click);
     return undef unless $r;
+    $s->{financial_list_response} = $r;
 
 # Parse the page into a tree
     my $tree = HTML::TreeBuilder->new_from_content($r->as_string);
