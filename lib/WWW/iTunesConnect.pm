@@ -184,6 +184,28 @@ sub daily_sales_summary
     (parse_sales_summary(\$r->content), 'file', $r->content, 'filename', $filename);
 }
 
+# Fetch a financial report for a given date and region
+sub fetch_financial_report
+{
+    my $s = shift;
+    my $month = shift if scalar @_;
+    return undef unless $month and ($month =~ /\d{4}\d{2}/);
+    my $region = shift if scalar @_;
+    return undef unless $region;
+
+    # Get the list of available reports
+    my $list = $s->financial_report_list();
+
+    # Check that the requested report is available
+    return undef unless $list and $list->{$month} and $list->{$month}->{$region};
+
+    # Fetch the report
+    my $r = $s->request($list->{$month}->{$region}{path});
+    return undef unless $r and $r->is_success and $r->content;
+
+    ('filename', $list->{$month}->{$region}{filename}, 'content', $r->content);
+}
+
 # Fetch the list of available financial reports
 sub financial_report_list
 {
@@ -710,6 +732,19 @@ header line.
 
 If a single string argument is given in the form 'MM/DD/YYYY' that date will be
 fetched instead (if it's available).
+
+=item $itc->fetch_financial_report($month, $region)
+
+Fetch the raw report content for a given month and region. The month argument
+must be of the form 'YYYYMM' and the region argument is the name of a region
+as listed on the Financial Reports page of iTunes Connect.
+
+Returns a hash with two keys:
+
+    Key		Description
+    -----------------------------------------------------------------------
+    filename	The report filename as listed on the Financial Reports page
+    content	Raw content of the report file
 
 =item $itc->financial_report_list()
 
