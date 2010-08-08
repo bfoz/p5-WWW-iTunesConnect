@@ -65,6 +65,59 @@ sub parse_table
     ('header', \@header, 'data', \@data);
 }
 
+# Parse a raw financial report into a report hash
+sub parse_financial_report
+{
+    my ($content) = @_;
+
+    # Parse the data
+    my %table = parse_table($content);
+    my ($header, $data) = @table{qw(header data)};
+
+    # Strip blank lines
+    @$data = grep { scalar @$_ } @$data;
+
+    # Strip off the Total row and parse it
+    my $total = pop @$data;
+    my $currency;
+    if( 1 == scalar @$total )	# Late-2010 style report
+    {
+	$total = shift @$total;
+	$total =~ s/[^\d.,]//g;
+    }
+    else
+    {
+	$currency = @$total[8];
+	$total = @$total[7];
+	$total =~ s/[^\d.,]//g;
+    }
+
+    # Convert the various region-specific date formats to YYYYMMDD
+    my $startIndex = 0;
+    my $endIndex = 0;
+    ++$startIndex while $header->[$startIndex] ne 'Start Date';
+    ++$endIndex while $header->[$endIndex] ne 'End Date';
+    my $eu_reg = qr/(\d\d)\.(\d\d)\.(\d{4})/;
+    my $us_reg = qr/(\d\d)\/(\d\d)\/(\d{4})/;
+    for( @$data )
+    {
+	if( @$_[$startIndex] =~ $eu_reg )       # EU format
+	{
+	    @$_[$startIndex] = $3.$2.$1;
+	    @$_[$endIndex] =~ $eu_reg;
+	    @$_[$endIndex] = $3.$2.$1;
+	}
+	elsif( @$_[$startIndex] =~ $us_reg )    # US format
+	{
+	    @$_[$startIndex] = $3.$1.$2;
+	    @$_[$endIndex] =~ $us_reg;
+	    @$_[$endIndex] = $3.$1.$2;
+	}
+    }
+
+    ('header', $header, 'data', $data, 'total', $total, 'currency', $currency);
+}
+
 # Parse a gzip'd summary file fetched from the Sales/Trend page
 #  First argument is same as input argument to gunzip constructor
 #  Remaining arguments are passed as options to gunzip
