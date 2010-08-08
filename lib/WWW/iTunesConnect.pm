@@ -340,46 +340,16 @@ sub financial_report
     my %out;
     for( keys %{$regions} )
     {
-	my $r = $s->request($regions->{$_}{path});
-	next unless $r;
+	my %report = $s->fetch_financial_report($date, $_);
+	next unless %report;
 
 	# Parse the data
-	my %table = parse_table($r->content);
-	my ($header, $data) = @table{qw(header data)};
+	my %parsed = parse_financial_report($report{'content'});
+	next unless %parsed;
 
-	# Strip off the Total row and parse it
-	my @total = grep {$_ && length $_} @{$data->[-1]};
-	@total = undef unless shift(@total) eq 'Total';
-	if( @total )
-	{
-	    pop @$data;  # Remove the Total row from the data
-	    pop @$data;  # Discard the blank row
-	}
-
-	# Convert the various region-specific date formats to YYYYMMDD
-	my $startIndex = 0;
-	my $endIndex = 0;
-	++$startIndex while $header->[$startIndex] ne 'Start Date';
-	++$endIndex while $header->[$endIndex] ne 'End Date';
-	my $eu_reg = qr/(\d\d)\.(\d\d)\.(\d{4})/;
-	my $us_reg = qr/(\d\d)\/(\d\d)\/(\d{4})/;
-	for( @$data )
-	{
-	    if( @$_[$startIndex] =~ $eu_reg )       # EU format
-	    {
-		@$_[$startIndex] = $3.$2.$1;
-		@$_[$endIndex] =~ $eu_reg;
-		@$_[$endIndex] = $3.$2.$1;
-	    }
-	    elsif( @$_[$startIndex] =~ $us_reg )    # US format
-	    {
-		@$_[$startIndex] = $3.$1.$2;
-		@$_[$endIndex] =~ $us_reg;
-		@$_[$endIndex] = $3.$1.$2;
-	    }
-	}
-
-	@{$out{$date}{$_}}{qw(header data file filename total currency)} = ($header, $data, $r->content, $regions->{$_}{filename}, @total);
+	$out{$date}{$_} = \%parsed;
+	$out{$date}{$_}{'file'} = $report{'content'};
+	$out{$date}{$_}{'filename'} = $report{'filename'};
     }
     %out;   # Return
 }
