@@ -1,5 +1,10 @@
 Revision history for Perl extension WWW::iTunesConnect.
 
+1.15  Mon Aug  9 2010 11:00
+	- Apple changed "Sales\Trend Reports" to "Sales and Trends"
+	- New algorithm for finding the financial reports table
+	- Parse new financial report format
+
 1.14  Sat Feb  6 2010 17:35
 	- Update copright notice and iTC-tools link
 	- Allow POST requests to be redirected
