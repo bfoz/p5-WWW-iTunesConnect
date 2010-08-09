@@ -143,7 +143,7 @@ sub login
 # Bail out if no username and password
     return undef unless $s->{user} and $s->{password};
 # Prevent repeat logins
-    return 1 if $s->{login_response} and !($s->{login_response}->is_error);
+    return 1 if $s->{response}{login} and !($s->{response}{login}->is_error);
 
 # Fetch the login page
     my $r = $s->request('/WebObjects/MZLabel.woa/wa/default');
@@ -159,11 +159,11 @@ sub login
 # Submit the user's credentials
     $s->{login_form}->value('#accountname', $s->{user});
     $s->{login_form}->value('#accountpassword', $s->{password});
-    $s->{login_response} = $s->{ua}->request($s->{login_form}->click('1.Continue'));
-    return undef unless $s->{login_response} and !($s->{login_response}->is_error);
+    $s->{response}{login} = $s->{ua}->request($s->{login_form}->click('1.Continue'));
+    return undef unless $s->{response}{login} and !($s->{response}{login}->is_error);
 
     # Parse the page into a tree
-    my $tree = HTML::TreeBuilder->new_from_content($s->{login_response}->as_string);
+    my $tree = HTML::TreeBuilder->new_from_content($s->{response}{login}->as_string);
 
     # Look for a failed login notification. The login response doesn't set any
     #  error codes on failure; it merely displays a notice to the user. Try to
@@ -282,7 +282,7 @@ sub financial_report_list
     $form->value('itemsPerPage', $1);
     $r = $s->{ua}->request($form->click);
     return undef unless $r;
-    $s->{financial_list_response} = $r;
+    $s->{response}{financial_list} = $r;
 
 # Parse the page into a tree
     my $tree = HTML::TreeBuilder->new_from_content($r->as_string);
@@ -495,7 +495,7 @@ sub daily_sales_summary_form
     my ($s) = @_;
 
 # Use cached response to avoid another trip on the net
-    unless( $s->{daily_summary_sales_response} )
+    unless( $s->{response}{daily_summary_sales} )
     {
 # Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
 #  and submit it to get a list of available Daily Summary dates.
@@ -505,12 +505,12 @@ sub daily_sales_summary_form
         $form->value('#selDateType', 'Daily');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
-        $s->{daily_summary_sales_response} = $r;
+        $s->{response}{daily_summary_sales} = $r;
     }
 
 # The response includes a form containing a select input element with the list 
 #  of available dates. Create and return a form object for it.
-    my @forms = HTML::Form->parse($s->{daily_summary_sales_response});
+    my @forms = HTML::Form->parse($s->{response}{daily_summary_sales});
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
     shift @forms;
@@ -522,7 +522,7 @@ sub monthly_free_summary_form
     my ($s) = @_;
 
 # Use cached response to avoid another trip on the net
-    unless( $s->{monthly_summary_free_response} )
+    unless( $s->{response}{monthly_summary_free} )
     {
 # Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
 #  and submit it to get a list of available Monthly Summary dates.
@@ -532,12 +532,12 @@ sub monthly_free_summary_form
         $form->value('#selDateType', 'Monthly Free');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
-        $s->{monthly_summary_free_response} = $r;
+        $s->{response}{monthly_summary_free} = $r;
     }
 
 # The response includes a form containing a select input element with the list 
 #  of available dates. Create and return a form object for it.
-    my @forms = HTML::Form->parse($s->{monthly_summary_free_response});
+    my @forms = HTML::Form->parse($s->{response}{monthly_summary_free});
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
     shift @forms;
@@ -549,7 +549,7 @@ sub weekly_sales_summary_form
     my ($s) = @_;
 
 # Use cached response to avoid another trip on the net
-    unless( $s->{weekly_summary_sales_response} )
+    unless( $s->{response}{weekly_summary_sales} )
     {
 # Get an HTML::Form object for the Sales/Trends Reports page. Then fill it out
 #  and submit it to get a list of available Weekly Summary dates.
@@ -559,12 +559,12 @@ sub weekly_sales_summary_form
         $form->value('#selDateType', 'Weekly');
         $form->value('hiddenSubmitTypeName', 'ShowDropDown');
         my $r = $s->{ua}->request($form->click('download'));
-        $s->{weekly_summary_sales_response} = $r;
+        $s->{response}{weekly_summary_sales} = $r;
     }
 
 # The response includes a form containing a select input element with the list 
 #  of available dates. Create and return a form object for it.
-    my @forms = HTML::Form->parse($s->{weekly_summary_sales_response});
+    my @forms = HTML::Form->parse($s->{response}{weekly_summary_sales});
     @forms = grep $_->attr('name') eq 'frmVendorPage', @forms;
     return undef unless @forms;
     shift @forms;
@@ -592,7 +592,7 @@ sub financial_response
     my $s = shift;
 
 # Returned the cached response to avoid another trip on the net
-    return $s->{financial_response} if $s->{financial_response};
+    return $s->{response}{financial} if $s->{response}{financial};
 
     unless( $s->{financial_path} )
     {
@@ -609,7 +609,7 @@ sub financial_response
     my $r = $s->request($s->{financial_path});
     return undef unless $r;
 
-    $s->{financial_response} = $r;
+    $s->{response}{financial} = $r;
 }
 
 # Follow the Sales and Trends redirect and store the response for later use
@@ -618,7 +618,7 @@ sub sales_response
     my $s = shift;
 
 # Returned cached response to avoid another trip on the net
-    return $s->{sales_response} if $s->{sales_response};
+    return $s->{response}{sales} if $s->{response}{sales};
 
     unless( $s->{sales_path} )
     {
@@ -640,7 +640,7 @@ sub sales_response
     $r = $s->{ua}->get($1);
     return undef unless $r;
 
-    $s->{sales_response} = $r;
+    $s->{response}{sales} = $r;
 }
 
 # --- Internal use only ---
