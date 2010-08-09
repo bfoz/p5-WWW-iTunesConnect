@@ -153,13 +153,13 @@ sub login
     my @forms = HTML::Form->parse($r);
     @forms = grep $_->attr('name') eq 'appleConnectForm', @forms;
     return undef unless @forms;
-    $s->{login_form} = shift @forms;
-    return undef unless $s->{login_form};
+    $s->{form}{login} = shift @forms;
+    return undef unless $s->{form}{login};
 
 # Submit the user's credentials
-    $s->{login_form}->value('#accountname', $s->{user});
-    $s->{login_form}->value('#accountpassword', $s->{password});
-    $s->{response}{login} = $s->{ua}->request($s->{login_form}->click('1.Continue'));
+    $s->{form}{login}->value('#accountname', $s->{user});
+    $s->{form}{login}->value('#accountpassword', $s->{password});
+    $s->{response}{login} = $s->{ua}->request($s->{form}{login}->click('1.Continue'));
     return undef unless $s->{response}{login} and !($s->{response}{login}->is_error);
 
     # Parse the page into a tree
