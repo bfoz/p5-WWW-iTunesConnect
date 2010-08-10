@@ -78,18 +78,31 @@ sub parse_financial_report
     @$data = grep { scalar @$_ } @$data;
 
     # Strip off the Total row and parse it
-    my $total = pop @$data;
+    my $last_row = pop @$data;
     my $currency;
-    if( 1 == scalar @$total )	# Late-2010 style report
+    my $units;
+    my $total;
+    # Detect the report format
+    if( 1 == scalar @$last_row )	# February 2009 - May 2010 format
     {
-	$total = shift @$total;
-	$total =~ s/[^\d.,]//g;
+	$total = shift @$last_row;
+	$total =~ s/[^\d.,]//g;	# Strip everything but the number
     }
-    else
+    elsif( 2 == scalar @$last_row )	# June 2010 format
     {
-	$currency = @$total[8];
-	$total = @$total[7];
-	$total =~ s/[^\d.,]//g;
+	$units = @$last_row[1];
+	$last_row = pop @$data;
+	$total = @$last_row[1];
+	$last_row = pop @$data;
+	my $num_rows = @$last_row[1];
+	# Consistency check: the number of rows in the table should match the Total_Rows line
+	return undef if $num_rows != scalar @$data;
+    }
+    else				# Pre-February 2009 format
+    {
+	$currency = @$last_row[8];
+	$total = @$last_row[7];
+	$total =~ s/[^\d.,]//g if defined $total;
     }
 
     # Convert the various region-specific date formats to YYYYMMDD
@@ -115,7 +128,7 @@ sub parse_financial_report
 	}
     }
 
-    ('header', $header, 'data', $data, 'total', $total, 'currency', $currency);
+    ('header', $header, 'data', $data, 'total', $total, 'currency', $currency, 'units', $units);
 }
 
 # Parse a gzip'd summary file fetched from the Sales/Trend page
