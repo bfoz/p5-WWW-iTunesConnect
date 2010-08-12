@@ -599,30 +599,54 @@ sub sales_form
     shift @forms;
 }
 
-# Fetch the Financial Reports page and cache the response
+# Fetch the desired Financial Reports page and cache the response
+#  Fetches the first page if no page number is given
 sub financial_response
 {
     my $s = shift;
+    my $page = 1;
+    $page = shift if scalar @_;
 
-# Returned the cached response to avoid another trip on the net
-    return $s->{response}{financial} if $s->{response}{financial};
+    # Try the cache first
+    return $s->{'response'}{'financial'}{$page} if $s->{'response'}{'financial'}{$page};
 
     unless( $s->{financial_path} )
     {
 	# Nothing to do without the main menu
 	return undef unless $s->{main_menu_tree};
 
-	# Find the Fincial Reports path that's listed on the main menu
+	# Find the Financial Reports path that's listed on the main menu
 	my $element = $s->{main_menu_tree}->look_down('_tag', 'a', sub { $_[0]->as_trimmed_text eq 'Financial Reports'});
 	return undef unless $element;
 	$s->{financial_path} = $element->attr('href');
 	return undef unless $s->{financial_path};
     }
 
-    my $r = $s->request($s->{financial_path});
-    return undef unless $r;
+    my $r;
+    if( $page > 1 )
+    {
+	$r = $s->financial_response;		# Want the form on the first page
 
-    $s->{response}{financial} = $r;
+	return undef if $page > $s->{num_financial_report_pages};
+
+	# Get the Items/Page form and set to display the desired page
+	my @forms = HTML::Form->parse($r);
+	@forms = grep $_->find_input('currPage', 'text'), @forms;
+	my $form = shift @forms;
+	return undef unless $form;
+
+	$form->value('currPage', $page);	# Set the input for the desired page
+	$r = $s->{ua}->request($form->click);	# Get the new page
+    }
+    else
+    {
+	$r = $s->request($s->{'financial_path'});
+	$r->content =~ /Page\s*<input.*\/>\s*of\s*(\d+)\s*/;
+	$s->{num_financial_report_pages} = $1;
+    }
+
+    return undef unless $r;
+    $s->{'response'}{'financial'}{$page} = $r;
 }
 
 # Follow the Sales and Trends redirect and store the response for later use
