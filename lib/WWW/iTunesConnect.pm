@@ -638,6 +638,11 @@ sub financial_response
     else
     {
 	$r = $s->request($s->{'financial_path'});
+
+	# Find the number of available financial reports
+	$r->content =~ /(\d+) iTunes Financial Reports/;
+	$s->{num_financial_reports} = $1;
+
 	$r->content =~ /Page\s*<input.*\/>\s*of\s*(\d+)\s*/;
 	$s->{num_financial_report_pages} = $1;
 
