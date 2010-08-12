@@ -289,10 +289,7 @@ sub financial_report_list
     @forms = grep $_->find_input('itemsPerPage', 'text'), @forms;
     my $form = shift @forms;
     return undef unless $form;
-
-    # Parse the input's label to find the highest value that it can be set to
-    $r->as_string =~ /items\/page \(max (\d+)\)/;
-    $form->value('itemsPerPage', $1);
+    $form->value('itemsPerPage', $s->{max_financial_reports_per_page});
     $r = $s->{ua}->request($form->click);
     return undef unless $r;
     $s->{response}{financial_list} = $r;
@@ -643,6 +640,10 @@ sub financial_response
 	$r = $s->request($s->{'financial_path'});
 	$r->content =~ /Page\s*<input.*\/>\s*of\s*(\d+)\s*/;
 	$s->{num_financial_report_pages} = $1;
+
+	# Parse the input's label to find the highest value that it can be set to
+	$r->content =~ /items\/page \(max (\d+)\)/;
+	$s->{max_financial_reports_per_page} = $1;
     }
 
     return undef unless $r;
